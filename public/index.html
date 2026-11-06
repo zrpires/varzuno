@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#18231c"><meta name="description" content="Várzuno: sua pelada organizada. Sorteie times equilibrados, registre partidas e acompanhe os craques da turma.">
+  <title>Várzuno — A sua pelada, em outro nível.</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Pular para o conteúdo</a>
+<aside class="sidebar">
+  <a class="brand" href="#inicio" aria-label="Várzuno, início"><span class="brand-mark" aria-hidden="true">v.</span><span>várzuno<span class="brand-dot" aria-hidden="true">.</span></span></a>
+  <p class="sidebar-label">O VESTIÁRIO DA SUA TURMA</p>
+  <nav aria-label="Menu principal">
+    <a href="#peladas" data-nav="peladas"><svg aria-hidden="true"><use href="#i-grid"/></svg>Minhas peladas</a>
+    <a href="#inicio" data-nav="inicio"><svg aria-hidden="true"><use href="#i-grid"/></svg>Visão geral</a>
+    <a href="#atletas" data-nav="atletas"><svg aria-hidden="true"><use href="#i-people"/></svg>Atletas<span id="nav-count">0</span></a>
+    <a href="#sorteio" data-nav="sorteio"><svg aria-hidden="true"><use href="#i-shuffle"/></svg>Sorteio de times</a>
+    <a href="#partidas" data-nav="partidas"><svg aria-hidden="true"><use href="#i-ball"/></svg>Partidas</a>
+    <a href="#ranking" data-nav="ranking"><svg aria-hidden="true"><use href="#i-trophy"/></svg>Ranking</a>
+  </nav>
+  <div class="sidebar-bottom"><div class="club-avatar" aria-hidden="true">FC</div><div><strong id="sidebar-group">Minha pelada</strong><span>A resenha tem lugar marcado.</span></div></div>
+</aside>
+<div class="app-shell">
+  <header class="topbar"><div><span class="topbar-kicker">SEU FUTEBOL. SUAS ESTATÍSTICAS.</span><span id="today"></span></div><div class="topbar-actions"><button id="account-button" class="button secondary" type="button">Minha conta</button><span id="sync-status" role="status"><i></i>Conectando</span><button id="settings-button" class="icon-button" aria-label="Configurações e backup"><svg aria-hidden="true"><use href="#i-settings"/></svg></button></div></header>
+  <main id="main" tabindex="-1">
+    <div id="connection-error" class="connection-error" role="alert" hidden></div>
+    <section id="league-switcher" class="league-switcher" hidden><div><label for="active-league-select">Pelada selecionada</label><select id="active-league-select"></select></div><a class="link-button" href="#peladas">Gerenciar minhas peladas</a></section><div id="account-banners"></div><div id="view"></div>
+  </main>
+  <footer><strong>várzuno</strong><span>Menos discussão no sorteio. Mais bola rolando.</span></footer>
+</div>
+<div id="toast" role="status" class="toast" hidden></div>
+<dialog id="player-dialog" aria-labelledby="player-title"><form id="player-form"><div class="dialog-head"><div><p class="eyebrow">ELENCO</p><h2 id="player-title">Novo atleta</h2></div><button type="button" class="icon-button" data-close="player-dialog" aria-label="Fechar cadastro">×</button></div><input type="hidden" id="player-id"><label for="player-name">Nome ou apelido</label><input id="player-name" maxlength="50" minlength="2" required autocomplete="off" placeholder="Como a turma chama esse craque?"><div class="form-grid"><div><label for="player-position">Posição principal</label><select id="player-position"><option value="GOL">Goleiro</option><option value="ZAG">Zagueiro</option><option value="LAT">Lateral</option><option value="VOL">Volante</option><option value="MEI" selected>Meia</option><option value="ATA">Atacante</option></select></div><div><label for="player-overall">Overall · 1 a 99</label><input id="player-overall" type="number" min="1" max="99" step="1" value="75" required></div></div><p class="help">O overall é definido por você para equilibrar os times. A nota de cada partida é registrada separadamente.</p><div class="tiers"><span>1–59 · Base</span><span>60–74 · Prata</span><span>75–89 · Ouro</span><span>90–99 · Elite</span></div><div class="dialog-actions"><button type="button" class="button secondary" data-close="player-dialog">Cancelar</button><button type="submit" class="button primary" data-write>Salvar atleta</button></div><p id="player-error" class="form-error" role="alert"></p></form></dialog>
+<dialog id="match-dialog" class="wide-dialog" aria-labelledby="match-title"><form id="match-form"><div class="dialog-head"><div><p class="eyebrow">BOLA ROLANDO</p><h2 id="match-title">Registrar partida</h2></div><button type="button" class="icon-button" id="close-match" aria-label="Fechar partida">×</button></div><div id="match-fields"></div><p id="match-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" class="button secondary" id="cancel-match">Voltar</button><button type="submit" class="button primary" data-write>Salvar resultado</button></div></form></dialog>
+<dialog id="settings-dialog" aria-labelledby="settings-title"><div class="dialog-head"><div><p class="eyebrow">SUA PELADA, DO SEU JEITO</p><h2 id="settings-title">Configurações</h2></div><button type="button" class="icon-button" data-close="settings-dialog" aria-label="Fechar configurações">×</button></div><form id="group-form"><label for="group-name">Nome da pelada</label><input id="group-name" maxlength="60" minlength="2" required><button class="button primary" data-write>Salvar nome</button></form><hr><h3>Seu histórico merece um backup.</h3><p class="help">Este backup contém apenas a pelada selecionada. As outras peladas da sua conta não são alteradas ao restaurá-lo.</p><button id="export-backup" class="button secondary">Exportar backup JSON</button><label for="import-backup">Restaurar um backup</label><input type="file" id="import-backup" accept=".json,application/json"><p class="help">A restauração substitui apenas os dados da pelada selecionada após sua confirmação. Limites: 300 atletas e 1.000 partidas.</p><hr><h3>Como os números funcionam</h3><p class="help">Participações = partidas em que o atleta jogou. Média = apenas notas preenchidas, de 0 a 10. Pontos = 3 por vitória e 1 por empate, apenas para quem participou. O overall é manual e não muda com a nota.</p><hr><button id="clear-data" class="button danger" data-write>Limpar dados desta pelada</button></dialog>
+<dialog id="text-dialog" aria-labelledby="text-title"><div class="dialog-head"><h2 id="text-title">Compartilhar times</h2><button type="button" class="icon-button" data-close="text-dialog" aria-label="Fechar texto">×</button></div><p class="help">Selecione e copie o texto abaixo para enviar à turma.</p><textarea id="share-text" rows="14" readonly></textarea></dialog>
+
+<dialog id="league-dialog" aria-labelledby="league-title"><form id="league-form"><div class="dialog-head"><div><p class="eyebrow">UMA NOVA TURMA</p><h2 id="league-title">Criar pelada</h2></div><button type="button" class="icon-button" data-close="league-dialog" aria-label="Fechar nova pelada">×</button></div><label for="league-name">Nome da pelada</label><input id="league-name" maxlength="60" minlength="2" required placeholder="Ex.: Quinta dos amigos"><p class="help">Cada pelada tem seus próprios atletas, partidas e rankings.</p><p id="league-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" class="button secondary" data-close="league-dialog">Cancelar</button><button class="button primary" data-account-write>Criar pelada</button></div></form></dialog>
+<dialog id="account-dialog" aria-labelledby="account-title"><div class="dialog-head"><div><p class="eyebrow">SEU LUGAR NO VESTIÁRIO</p><h2 id="account-title">Minha conta</h2></div><button type="button" class="icon-button" data-close="account-dialog" aria-label="Fechar minha conta">×</button></div><div id="account-fields"></div></dialog>
+
+<svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m0-17a3 3 0 0 1 0 6m3 4a5 5 0 0 1 3 5v2"/></symbol>
+<symbol id="i-shuffle" viewBox="0 0 24 24"><path d="m17 3 4 4-4 4M3 7h4c4 0 6 10 10 10h4m-4-4 4 4-4 4M3 17h4c2 0 3-2 4-4m2-2c1-2 2-4 4-4h4"/></symbol>
+<symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 4-2 6H9l-2-6 5-4zm0-4v4m9 4h-4m1 9-3-3M6 20l3-3M3 11h4"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 3h10v7a5 5 0 0 1-10 0V3zm10 2h4v3a4 4 0 0 1-4 4M7 5H3v3a4 4 0 0 0 4 4m5 3v6m-4 0h8"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="m9 3-1 3-3 1-2 3 2 2-1 3 3 3 3-1 2 3 3-1 1-3 3-1 2-3-2-2 1-3-3-3-3 1-2-3z"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></symbol>
+</defs></svg>
+</body></html>

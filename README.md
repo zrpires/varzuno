@@ -2,17 +2,7 @@
 
 Organize sua pelada: atletas por posição/overall, sorteio equilibrado, partidas, gols, assistências, notas e rankings.
 
-**Esta versão é feita para a Vercel.** O cadastro é próprio, com **nome, e-mail, telefone, posição e senha**. Não utiliza login por Sites, ChatGPT, Google ou Facebook.
-
-## Publicar
-
-A configuração já está em `vercel.json`: Node.js 22, Framework Other, `npm run build`, saída `dist` e rotas de API na Vercel.
-
-**Para ativar cadastros e dados na nuvem, conecte Neon/Postgres ao projeto pelo Storage da Vercel e faça Redeploy.** A integração deve fornecer `DATABASE_URL` (ou `POSTGRES_URL`) ao servidor. O build cria o banco automaticamente no esquema `varzuno`.
-
-[Passo a passo de configuração na Vercel](docs/VERCEL.md).
-
-Sem banco conectado, o site abre e o **convidado local** funciona. As contas mostram uma mensagem de configuração, sem fingir salvar na nuvem.
+**Esta versão é feita para a Vercel.** O cadastro é próprio, com **nome, e-mail, telefone, posição e senha**.
 
 ## Funcionalidades
 

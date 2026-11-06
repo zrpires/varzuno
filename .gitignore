@@ -5,3 +5,5 @@ dist/
 .sites-runtime/
 .wrangler/
 outputs/
+
+!.env.example

@@ -1,20 +1,24 @@
 {
   "name": "varzuno",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.13.0"
+    "node": "22.x"
   },
   "scripts": {
-    "test": "node scripts/build.mjs && node --test",
-    "check": "node scripts/check.mjs",
+    "dev": "node --env-file-if-exists=.env scripts/dev.mjs",
     "build": "node scripts/build.mjs",
-    "db:generate": "drizzle-kit generate"
+    "check": "node scripts/check.mjs",
+    "test": "node scripts/build.mjs && node --test tests/*.test.js",
+    "test:e2e": "node tests/browser.mjs",
+    "db:migrate": "node --env-file-if-exists=.env scripts/migrate.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0"
   },
   "devDependencies": {
-    "esbuild": "0.25.12",
-    "drizzle-kit": "0.31.8",
-    "drizzle-orm": "0.44.7"
+    "@electric-sql/pglite": "0.5.15",
+    "playwright": "1.65.0"
   }
 }

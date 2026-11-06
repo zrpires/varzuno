@@ -1,71 +1,44 @@
-# Banco de dados do Várzuno
+# Banco PostgreSQL do Várzuno
 
-Cloudflare D1 (SQLite), com tabelas normalizadas, chaves estrangeiras, índices e migrações Drizzle versionadas. A tabela `peladas` da versão 1 permanece imutável para permitir recuperação dos dados antigos.
+O servidor da Vercel acessa o Neon usando `DATABASE_URL` ou `POSTGRES_URL`, sem expor credenciais ao navegador. Os dados de contas ficam no esquema `varzuno`.
 
-```mermaid
-erDiagram
-  accounts ||--o{ leagues : owns
-  accounts ||--o{ guest_sessions : authenticates
-  leagues ||--o{ athletes : contains
-  leagues ||--o{ matches : records
-  matches ||--|{ match_teams : has
-  match_teams ||--o{ performances : tracks
-  athletes ||--o{ performances : plays
-  leagues ||--o| draws : prepares
-  draws ||--|{ draw_teams : divides
-  draw_teams ||--o{ draw_players : selects
-  athletes ||--o{ draw_players : participates
-```
-
-## Tabelas
-
-| Tabela | Responsabilidade |
+| Tabela | Uso |
 | --- | --- |
-| `accounts` | Perfil local, tipo de conta e vínculo único com a identidade ChatGPT. Não armazena senha. |
-| `guest_sessions` | Hash SHA-256 de token aleatório de 256 bits, conta convidada e expiração da sessão. |
-| `auth_limits` | Limite atômico de criação de sessões de convidado por janela de conexão. Não armazena IP bruto. |
-| `leagues` | Peladas independentes, proprietário, nome, revisão e marcador de migração antiga. |
-| `athletes` | Atletas de cada pelada, posição, overall, ativo/arquivado. |
-| `matches` | Confronto, data, local, notas textuais e gols sem autoria de cada lado. |
-| `match_teams` | Dois times e seus nomes/cores no momento de cada partida. |
-| `performances` | Presença, gols, assistências, nota opcional e identificação histórica do atleta. |
-| `draws` | Sorteio atual de cada pelada. |
-| `draw_teams` | Equipes do sorteio, preservando sua ordem. |
-| `draw_players` | Atletas e ordem dentro de cada equipe sorteada. |
-| `peladas` | Dados originais da versão 1, somente para importação explícita pelo proprietário. |
+| `accounts` | Nome, e-mail único normalizado, telefone, posição, hash da senha e data de cadastro. |
+| `sessions` | Hash de token aleatório, proprietário e expiração; tokens brutos ficam somente em cookie HttpOnly. |
+| `auth_limits` | Contadores de tentativas por janela, sem armazenar IP/e-mail em texto como chave. |
+| `leagues` | Peladas, proprietário, revisão e token exclusivo de cada operação de gravação. |
+| `athletes` | Atletas de cada pelada, posição e overall. |
+| `matches` | Confrontos, datas, locais, observações e gols sem autoria. |
+| `match_teams` | Times e nomes no momento de cada partida. |
+| `performances` | Presenças, gols, assistências, notas e identificação histórica do atleta. |
+| `draws` | Sorteio atual da pelada. |
+| `draw_teams` | Equipes sorteadas. |
+| `draw_players` | Jogadores e ordem das equipes sorteadas. |
+| `schema_migrations` | Migrações aplicadas. |
 
-## Isolamento e integridade
+## Autenticação e permissões
 
-Todos os acessos a peladas usam o proprietário resolvido no servidor. Um `owner_id` enviado pelo navegador é ignorado. Consulta, atualização, exclusão e listagem não permitem acessar outra conta. Identificadores de atletas e partidas são únicos dentro da pelada; importar o mesmo backup em outra pelada não causa colisões.
+Senhas usam scrypt com salt aleatório, `N=32768`, `r=8`, `p=3` e comparação em tempo constante. As sessões usam tokens aleatórios de 256 bits e armazenam somente SHA-256 no banco. O cookie de produção é `__Host-varzuno-session`, com `HttpOnly`, `Secure`, `SameSite=Lax` e validade de 30 dias. Sair revoga a sessão no servidor.
 
-As chaves estrangeiras compostas impedem relacionar uma atuação a um atleta de outra pelada. Não é possível escalar o mesmo atleta duas vezes na mesma partida/sorteio. Exclusões em cascata ficam limitadas à pelada excluída.
+A identidade vem exclusivamente dessa sessão. Cabeçalhos do antigo provedor e identificadores de proprietário enviados pelo navegador não autorizam acesso. Leitura, atualização e exclusão exigem o proprietário correto. As consultas usam parâmetros.
 
-O salvamento normaliza o documento validado em 11 instruções, executadas em um único `DB.batch()`, que é transacional. A primeira instrução exige a revisão anterior e grava um token exclusivo da operação. As demais instruções só executam se esse token e o proprietário coincidirem. Assim, uma revisão vencida não apaga os registros filhos. Uma falha em qualquer instrução reverte todo o lote.
+O app não envia confirmação por e-mail/SMS e ainda não oferece recuperação automática de senha por e-mail. Não apresenta telefone/e-mail como verificados.
 
-Os rankings são derivados das atuações e partidas; não há contadores incrementais que dupliquem gols ao corrigir resultados. Notas zero continuam diferentes de notas não preenchidas.
+## Integridade
 
-## Identidade e sessões
+As chaves estrangeiras compostas impedem usar atletas de outra pelada em uma atuação. Excluir uma pelada remove apenas seus registros filhos, sem afetar outras turmas. Backups podem ser importados em peladas distintas sem colisões de atletas/partidas.
 
-O Sites faz o login com ChatGPT e injeta a identidade autenticada. O app não implementa OAuth, não trata callbacks do provedor e não recebe a senha do usuário. O primeiro cadastro de perfil é uma ação explícita; ler a página não cria contas.
-
-Convidados recebem cookie `__Host-varzuno-guest`, `HttpOnly`, `Secure` e `SameSite=Lax`, válido por 30 dias. Somente o hash do token fica no banco. Ao sair, a sessão é revogada. Se não restarem peladas ou sessões, a conta de convidado vazia é removida. A perda do cookie/expiração impede recuperar esses registros sem um backup ou uma transferência anterior para conta. A expiração é de acesso, não uma promessa de exclusão física automática de dados.
-
-Entrar com ChatGPT permite transferir explicitamente as peladas da sessão convidada presente neste navegador. A operação troca o proprietário das peladas, preservando seus dados, e revoga a antiga sessão. Ela nunca aceita o identificador de outra conta convidada como autorização.
-
-## Importação da versão 1
-
-Após cadastro/login, o app oferece a importação quando existe um registro `peladas.owner_id` correspondente à identidade autenticada. A importação é explícita e idempotente, com marcador único. Uma importação interrompida pode ser retomada. A cópia original não é apagada nem alterada.
-
-## Limites operacionais
-
-- Conta ChatGPT: até 50 peladas.
-- Sessão convidada: até 5 peladas.
-- Por pelada: 300 atletas, 1.000 partidas e até 2 MB por requisição/backup.
-- Criação de convidados: 10 novas sessões/hora por IP informado pela infraestrutura; fallback conservador de 100/hora quando o IP não está disponível.
-- Sessões e limites antigos possuem data de expiração. Não há limpeza física agendada automaticamente. Uma política de retenção e rotina administrativa podem ser configuradas conforme a operação real.
+O salvamento usa transação e exige a revisão esperada. As instruções de gravação/deleção de filhos também exigem o token exclusivo da mesma operação. Uma revisão antiga não apaga dados. Falhas revertem a transação inteira. Os rankings são derivados das atuações, sem contadores incrementais duplicados ao editar uma partida.
 
 ## Migrações
 
-Não altere `0000_rare_marrow.sql` ou seus metadados: já foram aplicados. `0001_brief_avengers.sql` adiciona as tabelas normalizadas, sem apagar dados anteriores. Novas mudanças devem ser geradas com `npm run db:generate`, revisadas e publicadas pelo Sites, que aplica migrações pendentes antes de ativar o Worker.
+`migrations/001_initial.sql` cria somente o esquema `varzuno`, sem apagar outros esquemas do banco. O build aplica migrações pendentes dentro de transação e lock. Não há criação de tabelas durante requisições normais. Execute manualmente com `npm run db:migrate`, usando a conexão somente no servidor.
 
-Os testes usam SQLite real em memória com `PRAGMA foreign_keys=ON` e transações, validando permissões, rollback, isolamento, transferência, migração, expiração e conflitos de revisão.
+Os testes usam PostgreSQL embutido (PGlite), com SQL, constraints e transações reais. A conexão final ao Neon depende da variável no ambiente Vercel e deve ser verificada em `/api/health`.
+
+## Convidado local
+
+Convidados não criam conta no PostgreSQL. Até 5 peladas ficam no armazenamento deste navegador, sem proteção por senha nem sincronização entre dispositivos. Sair encerra o modo, mas não apaga essas peladas; a entrada como convidado permite retomá-las neste mesmo navegador. Apagar dados do site remove os registros locais.
+
+Após cadastrar/entrar em uma conta, o usuário pode transferir as peladas locais para a nuvem. Cada cópia local só é removida após confirmação da gravação correspondente. Uma transferência interrompida pode ser retomada sem sobrescrever alterações de uma cópia na nuvem. Exporte backups regularmente.
